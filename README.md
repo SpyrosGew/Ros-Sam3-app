@@ -1,6 +1,12 @@
-Start first commiit yaaa yeeet
+This project contains multiple services you need to run, which are listed in the docker-compose.yml file.
 
+## Service 1: sensor_node
 
-if you want to attach to the realsense node container and run stuff to see the topics published ect. you need to run
+sensor_node with the realsense_node container is responsible for gathering data from a realsense camera and publishing streams in the form of ROS topics.
 
-source /opt/ros/humble/setup.bash to load the nececery environment variables. The container still functions without this but if you wnat to info from a terminal you need to do this
+You can enter the running container for testing with
+
+```console
+sudo docker exec -it realsense_node bash -c "source /opt/ros/humble/setup.bash && ros2 topic list"
+```
+
