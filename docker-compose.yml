@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # =================================================================
+  # Component 1: RealSense Camera Driver Node (Your Simple Package Build)
+  # =================================================================
+  sensor_node:
+    build:
+      context: ./docker/realsense_node
+      dockerfile: Dockerfile
+    container_name: realsense_node
+    restart: unless-stopped
+    
+    # CRITICAL: Keep all hardware access flags. Must run with sudo!
+    privileged: true 
+    volumes:
+      - /dev:/dev
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+
+    network_mode: host 
+    environment:
+      - ROS_DOMAIN_ID=42 
+      
+    # Command to run the camera driver
+    command: >
+      ros2 launch realsense2_camera rs_launch.py 
+      pointcloud.enable:=true 
+      align_depth.enable:=true 
+      enable_sync:=true
