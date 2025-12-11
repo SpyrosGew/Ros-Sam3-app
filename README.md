@@ -29,6 +29,24 @@ You should connect the camera to the host machine before you run the container. 
 lsusb
 ```
 
+Build the sensor node with 
+
+```console
+sudo docker compose build sensor_node
+```
+
+And run it with
+
+```console
+sudo docker compose up -d sensor node
+```
+
+Check the logs for any errors (most importantly if the container is connected to the RealSense device) with
+
+```console
+sudo docker logs realsense_node
+```
+
 You can enter the running container for testing with
 
 ```console
