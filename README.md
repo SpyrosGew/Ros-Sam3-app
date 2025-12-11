@@ -1,6 +1,6 @@
 This project contains multiple services you need to run, which are listed in the docker-compose.yml file.
 
-## Service 1: sensor_node
+## Service 1: sensor_node (your laptop)
 
 sensor_node with the realsense_node container is responsible for gathering data from a realsense camera and publishing streams in the form of ROS topics.
 
