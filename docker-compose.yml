@@ -1,34 +1,52 @@
-version: '3.8'
-
 services:
-  # =================================================================
-  # Component 1: RealSense Camera Driver Node (Your Simple Package Build)
-  # =================================================================
+  # ================================================================
+  # PC1: RealSense Camera
+  # ================================================================
   sensor_node:
+    profiles: ["pc1"]
     build:
       context: ./docker/realsense_node
       dockerfile: Dockerfile
     container_name: realsense_node
     restart: unless-stopped
-    
-    # CRITICAL: Keep all hardware access flags. Must run with sudo!
-    privileged: true 
+    privileged: true
+    network_mode: host
     volumes:
       - /dev:/dev
+      - ./cyclonedds.xml:/config/cyclonedds.xml:ro
     devices:
       - /dev/bus/usb:/dev/bus/usb
-    cap_add:
-      - SYS_PTRACE
-    security_opt:
-      - seccomp:unconfined
-
-    network_mode: host 
     environment:
-      - ROS_DOMAIN_ID=42 
-      
-    # Command to run the camera driver
+      - ROS_DOMAIN_ID=42
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds.xml
+    # Inline bash command to start camera + keep container alive
+      - ROS_OVERRIDE_IP=10.100.55.16 # This container's IP
+      - ROS_GATHERING_ADDRESSES=10.100.55.16:11811;10.100.55.12:11811
     command: >
-      ros2 launch realsense2_camera rs_launch.py 
-      pointcloud.enable:=true 
-      align_depth.enable:=true 
-      enable_sync:=true
+      bash -c "ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true enable_sync:=true & tail -f /dev/null"
+
+
+  # ================================================================
+  # PC2: GPU client
+  # ================================================================
+  gpu_client:
+    profiles: ["pc2"]
+    build:
+      context: ./docker/gpu_client
+      dockerfile: Dockerfile
+    container_name: gpu_client
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./cyclonedds.xml:/config/cyclonedds.xml:ro
+    environment:
+      - ROS_DOMAIN_ID=42
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///config/cyclonedds.xml
+    # Inline bash to keep container alive for CLI
+      - ROS_OVERRIDE_IP=10.100.55.12 # This container's IP
+      - ROS_GATHERING_ADDRESSES=10.100.55.12:11811;10.100.55.16:11811
+    command: >
+      bash -c "tail -f /dev/null"
+
