@@ -1,9 +1,28 @@
+version: '3.7'
+
 services:
   # ================================================================
-  # PC1: RealSense Camera (IP: 10.100.55.16)
+  # 1. DISCOVERY SERVER (FastDDS - Runs ONLY on PC1)
+  # ================================================================
+  discovery_server:
+    profiles: ["pc1"]
+    image: ros:humble-ros-core
+    container_name: fastdds_server
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=42
+    # Start the server on PC1's IP (10.100.55.16) and the open port (11811)
+    command: fastdds discovery --server-id 0 -l 10.100.55.16 -p 11811
+
+  # ================================================================
+  # 2. SENSOR NODE (FastDDS Client - Runs ONLY on PC1)
   # ================================================================
   sensor_node:
     profiles: ["pc1"]
+    # The sensor node must wait for the discovery server to be ready
+    depends_on:
+      - discovery_server
     build:
       context: ./docker/realsense_node
       dockerfile: Dockerfile
@@ -13,22 +32,22 @@ services:
     network_mode: host
     volumes:
       - /dev:/dev
-      # NOTE: Keep the XML volume mount, but REMOVE the CYCLONEDDS_URI variable below
-      - ./cyclonedds.xml:/config/cyclonedds.xml:ro
     devices:
       - /dev/bus/usb:/dev/bus/usb
     environment:
       - ROS_DOMAIN_ID=42
-      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      # HOST-SPECIFIC FIX: Force the node to bind to the correct interface
-      - CYCLONEDDS_NETWORK_INTERFACE=10.100.55.16 
-      # REMOVED: CYCLONEDDS_URI to prevent conflict with CYCLONEDDS_NETWORK_INTERFACE
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      # CLIENT CONFIG: Connects to the Discovery Server on PC1
+      - ROS_DISCOVERY_SERVER=10.100.55.16:11811
+      - ROS_SUPER_CLIENT=true
     command: >
-      bash -c "ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true enable_sync:=true & tail -f /dev/null"
+      bash -c "ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true & tail -f /dev/null"
 
 
+# ... other services above ...
+  
   # ================================================================
-  # PC2: GPU client (IP: 10.100.55.12)
+  # 3. GPU CLIENT (FastDDS Client - Runs ONLY on PC2)
   # ================================================================
   gpu_client:
     profiles: ["pc2"]
@@ -39,12 +58,15 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./cyclonedds.xml:/config/cyclonedds.xml:ro
+      # Mount the new configuration file
+      - ./super_client_config.xml:/super_client_config.xml:ro 
     environment:
       - ROS_DOMAIN_ID=42
-      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      # HOST-SPECIFIC FIX: Force the node to bind to the correct interface
-      - CYCLONEDDS_NETWORK_INTERFACE=10.100.55.12 
-      # REMOVED: CYCLONEDDS_URI to prevent conflict
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      # NEW: Force CLI tools to use the Super Client XML profile
+      - FASTDDS_DEFAULT_PROFILES_FILE=/super_client_config.xml 
+      # Keep these as backup, though the XML should now be dominant
+      - ROS_DISCOVERY_SERVER=10.100.55.16:11811
+      - ROS_SUPER_CLIENT=true
     command: >
       bash -c "tail -f /dev/null"
