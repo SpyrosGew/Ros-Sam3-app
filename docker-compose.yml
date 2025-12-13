@@ -1,6 +1,6 @@
 services:
   # ================================================================
-  # PC1: RealSense Camera
+  # PC1: RealSense Camera (IP: 10.100.55.16)
   # ================================================================
   sensor_node:
     profiles: ["pc1"]
@@ -13,22 +13,22 @@ services:
     network_mode: host
     volumes:
       - /dev:/dev
+      # NOTE: Keep the XML volume mount, but REMOVE the CYCLONEDDS_URI variable below
       - ./cyclonedds.xml:/config/cyclonedds.xml:ro
     devices:
       - /dev/bus/usb:/dev/bus/usb
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      - CYCLONEDDS_URI=file:///config/cyclonedds.xml
-    # Inline bash command to start camera + keep container alive
-      - ROS_OVERRIDE_IP=10.100.55.16 # This container's IP
-      - ROS_GATHERING_ADDRESSES=10.100.55.16:11811;10.100.55.12:11811
+      # HOST-SPECIFIC FIX: Force the node to bind to the correct interface
+      - CYCLONEDDS_NETWORK_INTERFACE=10.100.55.16 
+      # REMOVED: CYCLONEDDS_URI to prevent conflict with CYCLONEDDS_NETWORK_INTERFACE
     command: >
       bash -c "ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true enable_sync:=true & tail -f /dev/null"
 
 
   # ================================================================
-  # PC2: GPU client
+  # PC2: GPU client (IP: 10.100.55.12)
   # ================================================================
   gpu_client:
     profiles: ["pc2"]
@@ -43,10 +43,8 @@ services:
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-      - CYCLONEDDS_URI=file:///config/cyclonedds.xml
-    # Inline bash to keep container alive for CLI
-      - ROS_OVERRIDE_IP=10.100.55.12 # This container's IP
-      - ROS_GATHERING_ADDRESSES=10.100.55.12:11811;10.100.55.16:11811
+      # HOST-SPECIFIC FIX: Force the node to bind to the correct interface
+      - CYCLONEDDS_NETWORK_INTERFACE=10.100.55.12 
+      # REMOVED: CYCLONEDDS_URI to prevent conflict
     command: >
       bash -c "tail -f /dev/null"
-

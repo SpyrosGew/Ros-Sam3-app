@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <CycloneDDS>
   <Domain id="any">
+    <General>
+      <AllowMulticast>false</AllowMulticast> 
+    </General>
     <Discovery>
       <Peers>
-        <Peer address="10.100.55.16"/>
-        <Peer address="10.100.55.12"/>
-      </Peers>
+        <Peer address="10.100.55.16"/>  <Peer address="10.100.55.12"/>  </Peers>
     </Discovery>
-  </Domain>
+    </Domain>
 </CycloneDDS>
