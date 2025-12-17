@@ -1,72 +1,37 @@
-version: '3.7'
+version: "3.8"
 
 services:
-  # ================================================================
-  # 1. DISCOVERY SERVER (FastDDS - Runs ONLY on PC1)
-  # ================================================================
-  discovery_server:
-    profiles: ["pc1"]
-    image: ros:humble-ros-core
-    container_name: fastdds_server
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - ROS_DOMAIN_ID=42
-    # Start the server on laptops IP and the open port (11811)
-    command: fastdds discovery --server-id 0 -l <laptops IP> -p 11811
 
   # ================================================================
-  # 2. SENSOR NODE (FastDDS Client - Runs ONLY on PC1)
+  # 1. REALSENSE NODE (PC1 / Laptop)
   # ================================================================
-  sensor_node:
+  realsense_node:
     profiles: ["pc1"]
-    # The sensor node must wait for the discovery server to be ready
-    depends_on:
-      - discovery_server
     build:
       context: ./docker/realsense_node
-      dockerfile: Dockerfile
     container_name: realsense_node
     restart: unless-stopped
-    privileged: true
     network_mode: host
-    volumes:
-      - /dev:/dev
+    privileged: true
     devices:
       - /dev/bus/usb:/dev/bus/usb
+    volumes:
+      - /dev:/dev
     environment:
-      - ROS_DOMAIN_ID=42
-      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      # CLIENT CONFIG: Connects to the Discovery Server on PC1
-      - ROS_DISCOVERY_SERVER=<laptops IP>:11811
-      - ROS_SUPER_CLIENT=true
-    command: >
-      bash -c "ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true & tail -f /dev/null"
+      - ZMQ_PUB_PORT=5555
+    command: python3 /app/realsense_publisher.py
 
-
-# ... other services above ...
-  
   # ================================================================
-  # 3. GPU CLIENT (FastDDS Client - Runs ONLY on PC2)
+  # 2. GPU CLIENT (PC2)
   # ================================================================
   gpu_client:
     profiles: ["pc2"]
     build:
       context: ./docker/gpu_client
-      dockerfile: Dockerfile
     container_name: gpu_client
     restart: unless-stopped
     network_mode: host
-    volumes:
-      # Mount the new configuration file
-      - ./super_client_config.xml:/super_client_config.xml:ro 
     environment:
-      - ROS_DOMAIN_ID=42
-      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      # NEW: Force CLI tools to use the Super Client XML profile
-      - FASTDDS_DEFAULT_PROFILES_FILE=/super_client_config.xml 
-      # Keep these as backup, though the XML should now be dominant
-      - ROS_DISCOVERY_SERVER=<laptops IP>:11811
-      - ROS_SUPER_CLIENT=true
-    command: >
-      bash -c "tail -f /dev/null"
+      - ZMQ_SERVER_IP=10.100.55.12
+      - ZMQ_SERVER_PORT=5555
+    command: python3 /app/gpu_client.py

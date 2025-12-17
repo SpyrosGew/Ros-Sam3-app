@@ -1,16 +1,30 @@
-FROM osrf/ros:humble-desktop
+FROM ubuntu:22.04
 
 LABEL maintainer="Your Name"
-LABEL description="ROS 2 Humble container for RealSense D400 series camera."
+LABEL description="RealSense ZeroMQ publisher"
 
-# Install RealSense ROS 2 wrapper + CycloneDDS
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System deps
 RUN apt-get update && apt-get install -y \
-    ros-humble-realsense2-camera \
-    ros-humble-rmw-fastrtps-cpp \
+    python3 \
+    python3-pip \
+    libgl1 \
+    libglib2.0-0 \
+    usbutils \
     && rm -rf /var/lib/apt/lists/*
 
-# ROS 2 entrypoint
-ENTRYPOINT ["/ros_entrypoint.sh"]
+# Python deps
+RUN pip3 install --no-cache-dir \
+    pyzmq \
+    numpy \
+    opencv-python \
+    pyrealsense2
 
-# Default command: interactive shell
-CMD ["bash"]
+# Workspace
+WORKDIR /app
+
+# Copy your python publisher here
+COPY realsense_publisher.py /app/realsense_publisher.py
+
+CMD ["python3", "/app/realsense_publisher.py"]

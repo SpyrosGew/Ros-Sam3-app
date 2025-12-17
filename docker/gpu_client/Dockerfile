@@ -1,15 +1,25 @@
-FROM osrf/ros:humble-desktop
+FROM ubuntu:22.04
 
 LABEL maintainer="Your Name"
-LABEL description="ROS 2 Humble GPU client with CycloneDDS for multi-machine."
+LABEL description="ZeroMQ GPU client"
 
-# Install CycloneDDS + ROS 2 CLI
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y \
-    ros-humble-rmw-fastrtps-cpp \
-    ros-humble-ros-base \
+    python3 \
+    python3-pip \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["/ros_entrypoint.sh"]
+RUN pip3 install --no-cache-dir \
+    pyzmq \
+    numpy \
+    opencv-python
 
-# Default command: interactive shell
-CMD ["bash"]
+WORKDIR /app
+
+# Copy your subscriber / inference code
+COPY gpu_client.py /app/gpu_client.py
+
+CMD ["python3", "/app/gpu_client.py"]
