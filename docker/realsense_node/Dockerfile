@@ -1,11 +1,11 @@
 FROM ubuntu:22.04
 
 LABEL maintainer="Your Name"
-LABEL description="RealSense ZeroMQ publisher"
+LABEL description="ZeroMQ + RealSense Publisher"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System deps
+# Install system deps
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -15,16 +15,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Python deps
-RUN pip3 install --no-cache-dir \
-    pyzmq \
-    numpy \
-    opencv-python \
-    pyrealsense2
+RUN pip3 install --no-cache-dir pyzmq numpy opencv-python pyrealsense2
 
-# Workspace
 WORKDIR /app
-
-# Copy your python publisher here
 COPY realsense_publisher.py /app/realsense_publisher.py
+
+# Run as root to ensure USB access
+USER root
 
 CMD ["python3", "/app/realsense_publisher.py"]
