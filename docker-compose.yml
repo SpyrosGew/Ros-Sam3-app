@@ -1,28 +1,8 @@
-version: '3.7'
-
 services:
   # ================================================================
-  # 1. DISCOVERY SERVER (Runs ONLY on PC1)
-  # ================================================================
-  discovery_server:
-    profiles: ["pc1"]
-    image: osrf/ros:foxy-desktop # Changed to Foxy
-    container_name: fastdds_server
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - ROS_DOMAIN_ID=42
-      - PYTHONUNBUFFERED=1
-    # Foxy discovery server syntax: -i for ID, -l for IP, -p for Port
-    command: fastdds discovery -i 0 -l 0.0.0.0 -p 11811
-
-  # ================================================================
-  # 2. SENSOR NODE (Runs ONLY on PC1)
+  # 1. SENSOR NODE (PC1) - NO Discovery Server needed
   # ================================================================
   sensor_node:
-    profiles: ["pc1"]
-    depends_on:
-      - discovery_server
     build:
       context: ./docker/realsense_node
       dockerfile: Dockerfile
@@ -32,24 +12,17 @@ services:
     network_mode: host
     volumes:
       - /dev:/dev
-    devices:
-      - /dev/bus/usb:/dev/bus/usb
+      - ./pc1_peers.xml:/initial_peers.xml:ro
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      - ROS_DISCOVERY_SERVER=127.0.0.1:11811
-      - PYTHONUNBUFFERED=1
-      # Note: ROS_SUPER_CLIENT is more common in newer FastDDS, 
-      # but we keep it here for compatibility.
-      - ROS_SUPER_CLIENT=true 
-    # Launching directly ensures the process gets SIGTERM correctly
+      - FASTDDS_DEFAULT_PROFILES_FILE=/initial_peers.xml
     command: ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true
 
   # ================================================================
-  # 3. GPU CLIENT (Runs ONLY on PC2)
+  # 2. GPU CLIENT (PC2)
   # ================================================================
   gpu_client:
-    profiles: ["pc2"]
     build:
       context: ./docker/gpu_client
       dockerfile: Dockerfile
@@ -57,12 +30,9 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./super_client_config.xml:/super_client_config.xml:ro 
+      - ./pc2_peers.xml:/initial_peers.xml:ro 
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      - FASTDDS_DEFAULT_PROFILES_FILE=/super_client_config.xml 
-      - ROS_DISCOVERY_SERVER=10.100.55.16:11811
-      - ROS_SUPER_CLIENT=true
-      - PYTHONUNBUFFERED=1
+      - FASTDDS_DEFAULT_PROFILES_FILE=/initial_peers.xml
     command: bash -c "source /opt/ros/foxy/setup.bash && tail -f /dev/null"
