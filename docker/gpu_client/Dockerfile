@@ -1,15 +1,12 @@
-FROM osrf/ros:humble-desktop
+FROM osrf/ros:foxy-desktop
 
-LABEL maintainer="Your Name"
-LABEL description="ROS 2 Humble GPU client with CycloneDDS for multi-machine."
-
-# Install CycloneDDS + ROS 2 CLI
+# Install base utilities + Fast DDS
 RUN apt-get update && apt-get install -y \
-    ros-humble-rmw-fastrtps-cpp \
-    ros-humble-ros-base \
+    ros-foxy-rmw-fastrtps-cpp \
+    python3-pip \
+    python3-argcomplete \
     && rm -rf /var/lib/apt/lists/*
 
+# The entrypoint is already in the base image, but we can be explicit
 ENTRYPOINT ["/ros_entrypoint.sh"]
-
-# Default command: interactive shell
 CMD ["bash"]

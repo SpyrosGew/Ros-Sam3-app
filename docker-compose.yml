@@ -2,25 +2,25 @@ version: '3.7'
 
 services:
   # ================================================================
-  # 1. DISCOVERY SERVER (FastDDS - Runs ONLY on PC1)
+  # 1. DISCOVERY SERVER (Runs ONLY on PC1)
   # ================================================================
   discovery_server:
     profiles: ["pc1"]
-    image: ros:humble-ros-core
+    image: osrf/ros:foxy-desktop # Changed to Foxy
     container_name: fastdds_server
     restart: unless-stopped
     network_mode: host
     environment:
       - ROS_DOMAIN_ID=42
-    # Start the server on laptops IP and the open port (11811)
-    command: fastdds discovery --server-id 0 -l <laptops IP> -p 11811
+      - PYTHONUNBUFFERED=1
+    # Foxy discovery server syntax: -i for ID, -l for IP, -p for Port
+    command: fastdds discovery -i 0 -l 10.100.55.16 -p 11811
 
   # ================================================================
-  # 2. SENSOR NODE (FastDDS Client - Runs ONLY on PC1)
+  # 2. SENSOR NODE (Runs ONLY on PC1)
   # ================================================================
   sensor_node:
     profiles: ["pc1"]
-    # The sensor node must wait for the discovery server to be ready
     depends_on:
       - discovery_server
     build:
@@ -37,17 +37,16 @@ services:
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      # CLIENT CONFIG: Connects to the Discovery Server on PC1
-      - ROS_DISCOVERY_SERVER=<laptops IP>:11811
-      - ROS_SUPER_CLIENT=true
-    command: >
-      bash -c "ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true & tail -f /dev/null"
+      - ROS_DISCOVERY_SERVER=10.100.55.16:11811
+      - PYTHONUNBUFFERED=1
+      # Note: ROS_SUPER_CLIENT is more common in newer FastDDS, 
+      # but we keep it here for compatibility.
+      - ROS_SUPER_CLIENT=true 
+    # Launching directly ensures the process gets SIGTERM correctly
+    command: ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true
 
-
-# ... other services above ...
-  
   # ================================================================
-  # 3. GPU CLIENT (FastDDS Client - Runs ONLY on PC2)
+  # 3. GPU CLIENT (Runs ONLY on PC2)
   # ================================================================
   gpu_client:
     profiles: ["pc2"]
@@ -58,15 +57,12 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      # Mount the new configuration file
       - ./super_client_config.xml:/super_client_config.xml:ro 
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      # NEW: Force CLI tools to use the Super Client XML profile
       - FASTDDS_DEFAULT_PROFILES_FILE=/super_client_config.xml 
-      # Keep these as backup, though the XML should now be dominant
-      - ROS_DISCOVERY_SERVER=<laptops IP>:11811
+      - ROS_DISCOVERY_SERVER=10.100.55.16:11811
       - ROS_SUPER_CLIENT=true
-    command: >
-      bash -c "tail -f /dev/null"
+      - PYTHONUNBUFFERED=1
+    command: bash -c "source /opt/ros/foxy/setup.bash && tail -f /dev/null"
