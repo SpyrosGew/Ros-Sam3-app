@@ -2,6 +2,11 @@
 <profiles xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
     <participant profile_name="pc2_participant" is_default_profile="true">
         <rtps>
+            <useBuiltinTransports>false</useBuiltinTransports>
+            <userTransports>
+                <transport_id>udp_transport</transport_id>
+                <type>UDPv4</type>
+            </userTransports>
             <builtin>
                 <initialPeersList>
                     <locator><udpv4><address>10.100.55.16</address></udpv4></locator>

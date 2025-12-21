@@ -1,6 +1,6 @@
 services:
   # ================================================================
-  # 1. SENSOR NODE (PC1) - NO Discovery Server needed
+  # 1. SENSOR NODE (PC1 - 10.100.55.16)
   # ================================================================
   sensor_node:
     build:
@@ -10,6 +10,8 @@ services:
     restart: unless-stopped
     privileged: true
     network_mode: host
+    ipc: host
+    shm_size: '1gb'
     volumes:
       - /dev:/dev
       - ./pc1_peers.xml:/initial_peers.xml:ro
@@ -17,10 +19,11 @@ services:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
       - FASTDDS_DEFAULT_PROFILES_FILE=/initial_peers.xml
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
     command: ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true
 
   # ================================================================
-  # 2. GPU CLIENT (PC2)
+  # 2. GPU CLIENT (PC2 - 10.100.55.12)
   # ================================================================
   gpu_client:
     build:
@@ -29,10 +32,13 @@ services:
     container_name: gpu_client
     restart: unless-stopped
     network_mode: host
+    ipc: host
+    shm_size: '1gb'
     volumes:
       - ./pc2_peers.xml:/initial_peers.xml:ro 
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
       - FASTDDS_DEFAULT_PROFILES_FILE=/initial_peers.xml
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
     command: bash -c "source /opt/ros/foxy/setup.bash && tail -f /dev/null"
