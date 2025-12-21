@@ -17,7 +17,8 @@ services:
       - ROS_DISCOVERY_SERVER=10.100.55.16:11811
     # Fixed: Use a single line or proper YAML multi-line block
     command: >
-      bash -c "fastrtps discovery --server-id 0 --ip-address 10.100.55.16 &
+      bash -c "source /opt/ros/foxy/setup.bash && 
+      fastdds discovery --server-id 0 --ip-address 10.100.55.16 & 
       ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true"
 
   gpu_client:
