@@ -1,7 +1,4 @@
 services:
-  # ================================================================
-  # 1. SENSOR NODE (PC1 - 10.100.55.16)
-  # ================================================================
   sensor_node:
     build:
       context: ./docker/realsense_node
@@ -10,21 +7,17 @@ services:
     restart: unless-stopped
     privileged: true
     network_mode: host
-    ipc: host
-    shm_size: '1gb'
+    ipc: host # Keep host IPC for local driver access, but we will disable SHM in XML
     volumes:
       - /dev:/dev
-      - ./pc1_peers.xml:/initial_peers.xml:ro
+      - ./pc1_peers.xml:/tmp/fastdds_profiles.xml:ro
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      - FASTDDS_DEFAULT_PROFILES_FILE=/initial_peers.xml
-      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+      - FASTDDS_DEFAULT_PROFILES_FILE=/tmp/fastdds_profiles.xml
+      - RMW_FASTRTPS_USE_XML_FILE=/tmp/fastdds_profiles.xml
     command: ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true
 
-  # ================================================================
-  # 2. GPU CLIENT (PC2 - 10.100.55.12)
-  # ================================================================
   gpu_client:
     build:
       context: ./docker/gpu_client
@@ -33,12 +26,11 @@ services:
     restart: unless-stopped
     network_mode: host
     ipc: host
-    shm_size: '1gb'
     volumes:
-      - ./pc2_peers.xml:/initial_peers.xml:ro 
+      - ./pc2_peers.xml:/tmp/fastdds_profiles.xml:ro 
     environment:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-      - FASTDDS_DEFAULT_PROFILES_FILE=/initial_peers.xml
-      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+      - FASTDDS_DEFAULT_PROFILES_FILE=/tmp/fastdds_profiles.xml
+      - RMW_FASTRTPS_USE_XML_FILE=/tmp/fastdds_profiles.xml
     command: bash -c "source /opt/ros/foxy/setup.bash && tail -f /dev/null"
