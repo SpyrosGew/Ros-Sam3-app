@@ -4,6 +4,9 @@
         <transport_descriptor>
             <transport_id>udp_transport</transport_id>
             <type>UDPv4</type>
+            <interfaceWhiteList>
+                <address>10.100.55.16</address>
+            </interfaceWhiteList>
         </transport_descriptor>
     </transport_descriptors>
 
