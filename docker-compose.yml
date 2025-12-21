@@ -16,7 +16,12 @@ services:
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
       - FASTDDS_DEFAULT_PROFILES_FILE=/tmp/fastdds_profiles.xml
       - RMW_FASTRTPS_USE_XML_FILE=/tmp/fastdds_profiles.xml
-    command: ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+      - FASTDDS_INITIAL_PEERS_LIST=10.100.55.12;10.100.55.16
+      - ROS_DISCOVERY_SERVER=10.100.55.16:11811
+    command: 
+      bash -c "fastrtps discovery --server-id 0 --ip-address 10.100.55.16 &
+      ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=false align_depth.enable:=true enable_sync:=true
 
   gpu_client:
     build:
@@ -33,4 +38,6 @@ services:
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
       - FASTDDS_DEFAULT_PROFILES_FILE=/tmp/fastdds_profiles.xml
       - RMW_FASTRTPS_USE_XML_FILE=/tmp/fastdds_profiles.xml
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+      - FASTDDS_INITIAL_PEERS_LIST=10.100.55.12;10.100.55.16
     command: bash -c "source /opt/ros/foxy/setup.bash && tail -f /dev/null"
